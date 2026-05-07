@@ -113,6 +113,7 @@ jobs:
     needs: eval
     runs-on: ubuntu-latest
     steps:
+      # Use EC2 Instance Connect so deploy does not depend on a long-lived SSH key secret.
       - name: Configure AWS credentials for EC2
         uses: aws-actions/configure-aws-credentials@v4
         with:
