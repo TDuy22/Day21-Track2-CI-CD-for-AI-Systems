@@ -113,21 +113,53 @@ jobs:
     needs: eval
     runs-on: ubuntu-latest
     steps:
-      - name: SSH deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Configure AWS credentials for EC2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            sudo systemctl restart mlops-serve
-            for i in 1 2 3 4 5; do
-              if curl -sf http://localhost:8000/health; then
-                echo "Health check passed."
-                exit 0
-              fi
-              sleep 3
-            done
-            echo "Health check failed."
-            sudo journalctl -u mlops-serve -n 50 --no-pager
-            exit 1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy with EC2 Instance Connect
+        run: |
+          set -euo pipefail
+
+          INSTANCE_ID="i-0e60670617156db8a"
+          EC2_REGION="us-east-1"
+          EC2_USER="ubuntu"
+
+          HOST=$(aws ec2 describe-instances \
+            --region "$EC2_REGION" \
+            --instance-ids "$INSTANCE_ID" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+
+          AZ=$(aws ec2 describe-instances \
+            --region "$EC2_REGION" \
+            --instance-ids "$INSTANCE_ID" \
+            --query "Reservations[0].Instances[0].Placement.AvailabilityZone" \
+            --output text)
+
+          ssh-keygen -t ed25519 -f eic_key -N "" -C "github-actions-eic"
+          aws ec2-instance-connect send-ssh-public-key \
+            --region "$EC2_REGION" \
+            --instance-id "$INSTANCE_ID" \
+            --availability-zone "$AZ" \
+            --instance-os-user "$EC2_USER" \
+            --ssh-public-key file://eic_key.pub
+
+          chmod 600 eic_key
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 -i eic_key "$EC2_USER@$HOST" <<'EOF'
+          set -e
+          sudo systemctl restart mlops-serve
+          for i in 1 2 3 4 5; do
+            if curl -sf http://localhost:8000/health; then
+              echo "Health check passed."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed."
+          sudo journalctl -u mlops-serve -n 50 --no-pager
+          exit 1
+          EOF
