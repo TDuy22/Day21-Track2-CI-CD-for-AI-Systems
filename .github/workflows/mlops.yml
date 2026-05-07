@@ -150,17 +150,8 @@ jobs:
             --ssh-public-key file://eic_key.pub
 
           chmod 600 eic_key
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 -i eic_key "$EC2_USER@$HOST" <<'EOF'
-          set -e
-          sudo systemctl restart mlops-serve
-          for i in 1 2 3 4 5; do
-            if curl -sf http://localhost:8000/health; then
-              echo "Health check passed."
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "Health check failed."
-          sudo journalctl -u mlops-serve -n 50 --no-pager
-          exit 1
-          EOF
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20 -i eic_key "$EC2_USER@$HOST" \
+            'sudo systemctl restart mlops-serve &&
+             sleep 10 &&
+             curl -sf http://localhost:8000/health &&
+             echo "Health check passed."'
