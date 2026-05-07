@@ -400,7 +400,7 @@ Ba test deu phai qua truoc khi tiep tuc.
 
 ## 2.11 Viet `.github/workflows/mlops.yml`
 
-Pipeline gom ba jobs chay theo thu tu: Test -> Train -> Deploy.
+Pipeline gồm bốn jobs chạy theo thứ tự: Unit Test -> Train -> Eval -> Deploy.
 
 Tao file `.github/workflows/mlops.yml` theo khung duoi day:
 
@@ -492,9 +492,9 @@ jobs:
           name: metrics
           path: outputs/metrics.json
 
-  # JOB 3: Trien khai chi khi accuracy dat nguong
-  deploy:
-    name: Deploy
+  # JOB 3: Kiem tra chat luong - chi cho phep deploy khi accuracy >= 0.70
+  eval:
+    name: Eval
     needs: train             # Chi chay khi job train qua
     runs-on: ubuntu-latest
     steps:
@@ -508,7 +508,10 @@ jobs:
           # <dien code Python o day>
           EOF
 
-      - name: SSH deploy to VM
+  # JOB 4: Trien khai sau khi eval gate qua
+  deploy:
+    name: Deploy
+    needs: eval              # Chi chay khi job eval qua
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VM_HOST }}
@@ -611,12 +614,12 @@ Nguyên nhân phổ biến:
 
 ## Kết Quả Cần Đạt - Bước 2
 
-- Cả ba GitHub Actions jobs (Test, Train, Deploy) đều hoàn thành thành công (màu xanh).
+- Cả bốn GitHub Actions jobs (Unit Test, Train, Eval, Deploy) đều hoàn thành thành công (màu xanh).
 - `curl http://VM_IP:8000/health` trả về `{"status": "ok"}`.
 - `curl http://VM_IP:8000/predict` trả về kết quả dự đoán hợp lệ.
 - GCS Console hiển thị file dữ liệu dưới `dvc/` và file model dưới `models/latest/model.pkl`.
 
-Chụp màn hình tab Actions hiển thị cả ba jobs màu xanh (cần nộp bài).
+Chụp màn hình tab Actions hiển thị cả bốn jobs màu xanh (cần nộp bài).
 
 ---
 

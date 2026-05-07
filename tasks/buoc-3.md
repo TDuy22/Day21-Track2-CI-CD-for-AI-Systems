@@ -86,9 +86,10 @@ data: bổ sung 2998 mẫu dữ liệu mới (train_phase2)
 
 Theo dõi từng job:
 
-1. **Test** - unit tests chạy trên code hiện tại (không thay đổi so với Bước 2).
+1. **Unit Test** - unit tests chạy trên code hiện tại (không thay đổi so với Bước 2).
 2. **Train** - CI runner pull tập dữ liệu mới (5996 mẫu) từ cloud storage, huấn luyện lại mô hình, upload `model.pkl` mới lên cloud storage.
-3. **Deploy** - nếu accuracy >= 0.70, service trên VM được restart với mô hình mới.
+3. **Eval** - kiểm tra accuracy >= 0.70, nếu không đạt thì pipeline dừng tại đây.
+4. **Deploy** - nếu eval gate qua, service trên VM được restart với mô hình mới.
 
 ---
 
@@ -188,7 +189,7 @@ Bước 3 - Huấn luyện liên tục
 
 - Chụp màn hình một lần chạy GitHub Actions được kích hoạt bởi commit dữ liệu.
   Xác nhận: commit message hiển thị trong tên của lần chạy Actions là commit dữ liệu của bạn.
-- Cả ba jobs (Test, Train, Deploy) đều hoàn thành thành công.
+- Cả bốn jobs (Unit Test, Train, Eval, Deploy) đều hoàn thành thành công.
 - So sánh accuracy giữa Bước 2 và Bước 3 đã được điền vào bảng ở mục 3.6.
 
 ---
